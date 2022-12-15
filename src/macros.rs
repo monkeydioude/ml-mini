@@ -1,11 +1,11 @@
 
 #[macro_export]
 macro_rules! layer {
-    ( $n:expr, $( $node_factory:expr),* ) => {
+    ( $n:expr, $( $node:expr),* ) => {
         {
-            let mut factories: Vec<$crate::node_factory::NodeFactory> = Vec::new();
+            let mut factories: Vec<Box<dyn $crate::node::Node>> = Vec::new();
             $(
-                factories.push($node_factory);
+                factories.push(Box::new($node));
             )*
             $crate::layer::Hidden::new(factories, $n)
         }

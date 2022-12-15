@@ -3,34 +3,53 @@ use ndarray::{Array2, Dim, Array1};
 use crate::{node_io::IO};
 
 pub type Shape = Dim<[usize; 2]>;
-pub type Weights = Option<(&Array2<f64>, &Array1<f64>)>;
+pub type Weights<'a> = Option<(Array1<f64>, f64)>;
 
-pub trait Node {
+// CloneNode allows to clone a Boxed dyn Node
+pub trait CloneNode {
+    fn clone_box(&self) -> Box<dyn Node>;
+}
+
+// The point of the whole CloneNode operation:
+// Implementation of Clone for a Box<dyn Node>.
+// Works only because Node trait extends CloneNode trait.
+impl Clone for Box<dyn Node> {
+    fn clone(&self) -> Self {
+        self.clone_box()
+    }
+}
+
+// Implementation of CloneNode on trait bound for any implementation of a Node. 
+// Make calling "clone()" possible for any Box<dyn Node>.
+// Poor man's proc macro :)
+impl<T> CloneNode for T
+where T: Node + Clone + 'static {
+    fn clone_box(&self) -> Box<dyn Node> {
+        Box::new(self.clone())
+    }
+}
+
+// : CloneNode should be made into a proc macro call (e.g.: #[derive(CloneBox)])
+pub trait Node: CloneNode {
     fn run(&self, input: IO, weights: Weights, params: Option<Vec<IO>>) -> Result<(IO, Option<Vec<IO>>), String>;    
-    // fn validate_shapes(&self, input_shape: Shape) -> bool;
-    // fn set_weights(&mut self, w: Array2<f64>);
-    // fn get_w(&self) -> Option<&Array2<f64>>;
     fn derive(&self, prev: Array2<f64>) -> Option<f64>;
     fn should_derive(&self) -> bool;
-    fn get_runner_fn(&self) -> fn(IO, Weights, Option<Vec<IO>>) -> Result<(IO, Option<Vec<IO>>), String>;
-    // fn train(&mut self, d: f64) -> Result<(), String>;
+    fn get_runner_fn(&self) -> Box<dyn Fn(IO, Weights, Option<Vec<IO>>) -> Result<(IO, Option<Vec<IO>>), String>>;
 }
 
-/* X2 struct */
-
-pub struct MulBy {
-}
+// proc macro call to Clone, to comply with the trait bound of CloneNode implementation.
+// MulBy is a test node. Will be replaced with more useful node,
+// like Logistic Regression node, or Convolution, etc...
+#[derive(Clone)]
+pub struct MulBy;
 
 impl Node for MulBy {
     fn run(&self,
         input: IO,
-        weights: Option<(&Array2<f64>, &Array1<f64>)>,
+        weights: Option<(Array1<f64>, f64)>,
         params: Option<Vec<IO>>
     ) -> Result<(IO, Option<Vec<IO>>), String> {
-        if let IO::Array2(v) = input {
-            return Ok((IO::Array2(v.dot(&self.w)), None));
-        }
-        Ok((IO::Array2(input * self.w.clone()), None))
+        self.get_runner_fn()(input, weights, params)
     }
 
     fn derive(&self, _: Array2<f64>) -> Option<f64> {
@@ -40,62 +59,56 @@ impl Node for MulBy {
     fn should_derive(&self) -> bool {
         true
     }
+
+    fn get_runner_fn(&self) -> Box<dyn Fn(IO, Weights, Option<Vec<IO>>) -> Result<(IO, Option<Vec<IO>>), String>> {
+        Box::new(|
+            input: IO,
+            weights: Option<(Array1<f64>, f64)>,
+            params: Option<Vec<IO>>
+        | -> Result<(IO, Option<Vec<IO>>), String> {
+            let (w, b) = match weights {
+                Some((_w, _b)) => (_w, _b),
+                None => {
+                    return Ok((input, None));
+                },
+            };
+            if let IO::Array2(v) = input {
+                return Ok((IO::Array1(v.dot(&w)), None));
+            }
+            Ok((IO::Array1(input * w), None))
+        })
+    }
 }
 
-/**
- * n = nodes spawn amount aka first dim of weights 'w' 
- */
 pub fn mul_by(_: f64) -> MulBy {
     MulBy {}
 }
 
-/* Value  struct */
-
-type Value = IO;
-
-impl Node for Value {
-    fn run(&self,
-        input: IO, 
-        weights: Option<(&Array2<f64>, &Array1<f64>)>, 
-        params: Option<Vec<IO>>
-    ) -> Result<(IO, Option<Vec<IO>>), String> {
-        input.null()?;
-        Ok((self.clone(), None))
-    }
-
-    fn derive(&self, _: Array2<f64>) -> Option<f64> {
-        Some(0.)
-    }
-
-    fn should_derive(&self) -> bool {
-        false
-    }
-}
-
-pub fn value(value: f64) -> Value {
-    IO::F64(value)
-}
-
+// Output trait defines how an output node should behave.
+// This trait will most likely determine when to start back prop.
 pub trait Output {
-    fn predict(&self, input: Array1<f64>) -> f64;
+    // predict el famoso y hat
+    fn predict(&self, input: Array1<f64>) -> IO;
     fn loss(&self, y: f64, y_hat: f64) -> f64;
     fn cost(&self, losses: Array2<f64>) -> f64;
-    fn set_activation_fn(&mut self, a_fn: fn(Array1<f64>) -> f64);
+    // set_activation_fn allows to define how to compute y_hat (classifier),
+    // used in Output::predict() method.
+    fn set_activation_fn(&mut self, a_fn: fn(Array1<f64>) -> IO);
 }
 
 #[derive(Clone)]
 pub struct Activation {
-    pub a_fn: fn(Array1<f64>) -> f64,
+    pub a_fn: fn(Array1<f64>) -> IO,
 }
 
 impl Activation {
-    pub fn new(activation_func: fn(Array1<f64>) -> f64) -> Self {
+    pub fn new(activation_func: fn(Array1<f64>) -> IO) -> Self {
         Activation { a_fn: activation_func }
     }
-}
+} 
 
 impl Output for Activation {
-    fn predict(&self, input: Array1<f64>) -> f64 {
+    fn predict(&self, input: Array1<f64>) -> IO {
         (self.a_fn)(input)
     }
 
@@ -107,7 +120,7 @@ impl Output for Activation {
         losses.sum() / losses.len() as f64
     }
 
-    fn set_activation_fn(&mut self, a_fn: fn(Array1<f64>) -> f64) {
+    fn set_activation_fn(&mut self, a_fn: fn(Array1<f64>) -> IO) {
         self.a_fn = a_fn;
     }
 }

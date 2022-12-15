@@ -1,24 +1,24 @@
-use ndarray::{Ix2, Array1, array};
+use ndarray::{Array1, Array2};
 
-use crate::{node::Node, node_factory::NodeFactory};
+use crate::{node::Node};
 
-pub trait Builder {
-    fn build(&self, prev_n: usize) -> Result<usize, String>;
-}
-
-pub trait Layer: Builder {
+pub trait Layer {
     fn run(&self, input: Array1<f64>) -> Array1<f64>;
 }
 
 pub struct Hidden {
+    // number of nodes 
     n: usize,
-    factories: Vec<NodeFactory>,
-    nodes: Vec<Box<dyn Node>>
+    nodes: Vec<Box<dyn Node>>,
+    weights: Array2<f64>,
+    biases: Array1<f64>,
 }
 
 impl Hidden {
-    pub fn new(factories: Vec<NodeFactory>, n: usize) -> Self {
-        Hidden { n, factories, nodes: Vec::<Box<dyn Node>>::new() }
+    // weights & biases should be either wrapped in their own structs,
+    // or defined by a method from a trait
+    pub fn new(nodes: Vec<Box<dyn Node>>, n: usize, weights: Array2<f64>, biases: Array1<f64>) -> Self {
+        Hidden { n, nodes, weights, biases }
     }
 }
 
@@ -27,27 +27,5 @@ impl Hidden {
 impl Layer for Hidden {
     fn run(&self, input: Array1<f64>) -> Array1<f64> {
         input
-    }
-    
-}
-
-impl Builder for Hidden {
-    /**
-     * prev_n: usize = last node of previous layer spawn amount (n)
-     */
-    fn build(&self, prev_n: usize) -> Result<usize, String> {
-        let mut n = prev_n;
-        let mut nodes: Vec<Box<dyn Node>> = Vec::new();
-
-        for factory in &self.factories {
-            let shape = Ix2(n, self.n);
-            println!("shape: {:?}", shape);
-            
-            n = 1;
-            nodes.push(factory.build(shape)?);
-        }
-
-        self.nodes = nodes;
-        Ok(self.n)
     }
 }

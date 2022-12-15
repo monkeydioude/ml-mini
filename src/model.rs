@@ -1,6 +1,6 @@
 use ndarray::array;
 
-use crate::{node_io::IO, node::{Node, Runner, Activation, Output}, layer::{Layer, Hidden, Builder}, train_params::TrainParams, input_filters::Filter};
+use crate::{node_io::IO, node::{Activation, Output}, layer::{Layer, Hidden, Builder}, train_params::TrainParams, input_filters::Filter};
 
 pub struct Model {
     input_layer: Vec<Box<Filter>>,
@@ -9,19 +9,10 @@ pub struct Model {
     train_params: Option<TrainParams>,
 }
 
-impl Runner for Vec<Box<dyn Node>> {
-    fn run(&self, input: IO, weights: Option<(&ndarray::Array2<f64>, &ndarray::Array1<f64>)>, params: Option<Vec<IO>>) -> Result<(IO, Option<Vec<IO>>), String> {
-        let mut output: IO = input;
-
-        for n in self {
-            println!("layer, node output: {:?}", output);
-            output = n.run(output, None, None)?.0;
-        }
-
-        Ok((output.clone(), None))
-    }
-}
-
+// Model's generale use is simple:
+// - Every layers and nodes are instantiated automatically inside "new()".
+// - "run()" starts the model computation process
+// - "train()" runs backprop and update the weights according to params
 impl Model {
     pub fn run(&mut self) -> Result<IO, String> {
         let mut output = array![];

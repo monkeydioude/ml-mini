@@ -66,6 +66,18 @@ impl std::ops::Mul<IO> for Array2<f64> {
     }
 }
 
+impl std::ops::Mul<IO> for Array1<f64> {
+    type Output = Array1<f64>;
+
+    fn mul(self, rhs: IO) -> Self::Output {
+        match rhs {
+            IO::F64(v) => self * v,
+            IO::Array1(v) => self * v,
+            _ => panic!("Can not multiply {} by {}", self, rhs)
+        }
+    }
+}
+
 impl std::ops::Mul<Array2<f64>> for IO {
     type Output = Array2<f64>;
 
@@ -73,6 +85,18 @@ impl std::ops::Mul<Array2<f64>> for IO {
         match self {
             IO::F64(v) => v * rhs,
             IO::Array2(v) => v * rhs,
+            _ => panic!("Can not multiply {} by {}", self, rhs)
+        }
+    }
+}
+
+impl std::ops::Mul<Array1<f64>> for IO {
+    type Output = Array1<f64>;
+
+    fn mul(self, rhs: Array1<f64>) -> Self::Output {
+        match self {
+            IO::F64(v) => v * rhs,
+            IO::Array1(v) => v * rhs,
             _ => panic!("Can not multiply {} by {}", self, rhs)
         }
     }
