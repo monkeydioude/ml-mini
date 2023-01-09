@@ -1,22 +1,24 @@
 use crate::{Weights, Bias, IO};
 
-// NodeActivationFunc type is the core function of a Node.
-// This is what will compute input and provide an output
-// with respect, if provided for this node, weights and bias.
-pub type NodeActivationFunc = dyn Fn(&IO, Option<(Weights, Bias)>) -> IO;
-
-pub trait Node {
+pub trait Node<F>
+where F: Fn(&IO, Option<(Weights, Bias)>) -> IO {
   // get_activation_func returns a NodeActivationFunc that will
   // compute input and give an output.
-  fn get_activation_func(&self) -> &dyn Fn(f64) -> f64;
+  fn get_activation_func(&self) -> &F;
 }
 
-pub struct DryNode {
-  pub a_fn: Box<dyn Fn(f64) -> f64>,
+// pub trait Derive {
+//   fn get_derive_func
+// }
+
+pub struct DryNode<F>
+where F: Fn(&IO, Option<(Weights, Bias)>) -> IO {
+  pub a_fn: F,
 }
 
-impl Node for DryNode {
-    fn get_activation_func(&self) -> &dyn Fn(f64) -> f64 {
+impl<F> Node<F> for DryNode<F>
+where F: Fn(&IO, Option<(Weights, Bias)>) -> IO {
+    fn get_activation_func(&self) -> &F {
         &self.a_fn
     }
 }
