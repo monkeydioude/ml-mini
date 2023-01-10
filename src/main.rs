@@ -7,6 +7,13 @@ pub type Weights = Array1<f64>;
 pub type Bias = f64;
 pub type IO = Array2<f64>;
 
+pub fn safe_row<T: Clone>(arr: &Array2<T>, row: usize) -> Option<Array1<T>> {
+    if row >= arr.shape().len() {
+        return None;
+    }
+    Some(arr.row(row).to_owned())
+}
+
 trait Layer<const N: usize, F> 
 where F: Fn(&IO, Option<(Weights, Bias)>) -> IO {
     // run takes an Array2<f64> as input, which will be used by each node
@@ -20,7 +27,7 @@ where F: Fn(&IO, Option<(Weights, Bias)>) -> IO {
     fn run(&self, input: IO) -> IO;
     
     // get_weights returns the weights for a specific node_index (nth clone of a node).
-    fn get_weights(&self, node_index: usize) -> &Weights;
+    fn get_weights(&self, node_index: usize) -> Weights;
     
     // get_bias return the biases for a specific node_index (nth clone of a node) (nth clone of a node).
     fn get_bias(&self, node_index: usize) -> &Bias;
@@ -65,9 +72,10 @@ where F: Fn(&IO, Option<(Weights, Bias)>) -> IO {
         out
     }
 
-    fn get_weights(&self, node_index: usize) -> &Weights {
-        match self.weights. {
-            Some(w) => 
+    fn get_weights(&self, node_index: usize) -> Weights {
+        match safe_row(&self.weights, node_index) {
+            Some(w) => w,
+            None => panic!("invalid node_index {}", node_index), 
         }
     }
 
