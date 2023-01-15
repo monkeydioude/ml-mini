@@ -1,12 +1,10 @@
 pub mod node;
 pub mod layer;
-pub mod layer_builder;
 
 use layer::{Weights, Bias, IO};
 use ndarray::array;
-use node::DryNode;
 
-use crate::layer::{HiddenLayer, Layer};
+use crate::{layer::{HiddenLayer, Layer}, node::{DryNode}};
 
 
 fn test(input: &IO, _: Option<(Weights, Bias)>) -> IO {
@@ -14,11 +12,11 @@ fn test(input: &IO, _: Option<(Weights, Bias)>) -> IO {
 }
 
 fn main() {
-   let hl =  HiddenLayer::<10, _>::new(vec![Box::new(
-        DryNode{
-            a_fn: test
-        }
-    )]);
-
+    let hl =  HiddenLayer::<10>::new(vec![
+        Box::new(DryNode {
+            a_fn: Box::new(test)
+        })
+    ]);
+    
     println!("{}", hl.run(array![[1., 2., 3.], [4., 5., 6.]]));
 }

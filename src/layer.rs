@@ -13,8 +13,7 @@ pub fn safe_row<T: Clone>(arr: &Array2<T>, row: usize) -> Option<Array1<T>> {
     Some(arr.row(row).to_owned())
 }
 
-pub trait Layer<const N: usize, F> 
-where F: Fn(&IO, Option<(Weights, Bias)>) -> IO {
+pub trait Layer<const N: usize> {
     // run takes an Array2<f64> as input, which will be used by each node
     // to compute a result,using weights and biases.
     // ex:  input.shape() = (1, 5)
@@ -39,19 +38,19 @@ where F: Fn(&IO, Option<(Weights, Bias)>) -> IO {
     
     // get_nodes returns an array, of size 'n', of nodes, that will compute,
     // by order, input and provide an output.
-    fn get_nodes(&self) -> &Vec<Box<dyn Node<F>>>;
+    fn get_nodes(&self) -> &Vec<Box<dyn Node>>;
 
-    fn with_nodes(nodes: Vec<Box<dyn Node<F>>>, previous_n: usize) -> Self;
+    fn with_nodes(nodes: Vec<Box<dyn Node>>, previous_n: usize) -> Self;
 }
 
-pub struct HiddenLayer<const N: usize, F> {
-    nodes: Vec<Box<dyn Node<F>>>,
+pub struct HiddenLayer<const N: usize> {
+    nodes: Vec<Box<dyn Node>>,
     weights: Array2<f64>,
     biases: Array1<f64>,
 }
 
-impl<const N: usize, F> HiddenLayer<N, F> {
-    pub fn new(nodes: Vec<Box<dyn Node<F>>>) -> Self {
+impl<const N: usize> HiddenLayer<N> {
+    pub fn new(nodes: Vec<Box<dyn Node>>) -> Self {
         let nlen = nodes.len();
         HiddenLayer {
             nodes,
@@ -61,8 +60,7 @@ impl<const N: usize, F> HiddenLayer<N, F> {
     }
 }
 
-impl<const N: usize, F> Layer<N, F> for HiddenLayer<N, F>
-where F: Fn(&IO, Option<(Weights, Bias)>) -> IO {
+impl<const N: usize> Layer<N> for HiddenLayer<N> {
     fn run(&self, input: IO) -> IO {
         let mut out = input;
         self.nodes.iter().for_each(|node| {
@@ -89,11 +87,11 @@ where F: Fn(&IO, Option<(Weights, Bias)>) -> IO {
         N
     }
 
-    fn get_nodes(&self) -> &Vec<Box<dyn Node<F>>> {
+    fn get_nodes(&self) -> &Vec<Box<dyn Node>> {
         &self.nodes
     }
 
-    fn with_nodes(nodes: Vec<Box<dyn Node<F>>>, previous_n: usize) -> Self {
+    fn with_nodes(nodes: Vec<Box<dyn Node>>, previous_n: usize) -> Self {
         HiddenLayer {
             nodes,
             weights: Array2::zeros((previous_n, N)),
