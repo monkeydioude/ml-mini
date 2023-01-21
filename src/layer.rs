@@ -1,4 +1,4 @@
-use ndarray::{Array2, Array1};
+use ndarray::{Array2, Array1, array};
 
 use crate::node::Node;
 
@@ -39,8 +39,6 @@ pub trait Layer<const N: usize> {
     // get_nodes returns an array, of size 'n', of nodes, that will compute,
     // by order, input and provide an output.
     fn get_nodes(&self) -> &Vec<Box<dyn Node>>;
-
-    fn with_nodes(nodes: Vec<Box<dyn Node>>, previous_n: usize) -> Self;
 }
 
 pub struct HiddenLayer<const N: usize> {
@@ -51,12 +49,21 @@ pub struct HiddenLayer<const N: usize> {
 
 impl<const N: usize> HiddenLayer<N> {
     pub fn new(nodes: Vec<Box<dyn Node>>) -> Self {
-        let nlen = nodes.len();
         HiddenLayer {
             nodes,
-            weights: Array2::zeros((nlen, N)),
-            biases: Array1::zeros(N),
+            weights: array![[]],
+            biases: array![],
         }
+    }
+
+    pub fn init_rand_weights(&mut self, previous_n: usize) {
+        // self.weights = ndarray::ran;
+        // self.biases = b;
+    }
+
+    pub fn init_weights_zeros(&mut self, previous_n: usize) {
+        self.weights = Array2::zeros((previous_n, N));
+        self.biases = Array1::zeros(N);
     }
 }
 
@@ -90,13 +97,4 @@ impl<const N: usize> Layer<N> for HiddenLayer<N> {
     fn get_nodes(&self) -> &Vec<Box<dyn Node>> {
         &self.nodes
     }
-
-    fn with_nodes(nodes: Vec<Box<dyn Node>>, previous_n: usize) -> Self {
-        HiddenLayer {
-            nodes,
-            weights: Array2::zeros((previous_n, N)),
-            biases: Array1::zeros(previous_n)
-        }
-    }
-
 }
