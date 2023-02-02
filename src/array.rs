@@ -2,11 +2,11 @@ use std::ops::Mul;
 
 use ndarray::{Array2, Array};
 
-pub struct VecBuilder<T> {
+pub struct VecBuilder<T: Clone>{
   v: Vec<T>
 }
 
-impl<T> VecBuilder<T> {
+impl<T: Clone> VecBuilder<T> {
   pub fn new() -> Self {
     VecBuilder { v: vec![] }
   }
@@ -19,7 +19,7 @@ impl<T> VecBuilder<T> {
     for i in 0..occ {
       self.v.push(func());
     }
-    self.v
+    self.v.clone()
   }
 }
 
