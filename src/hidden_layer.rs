@@ -13,7 +13,7 @@ pub fn safe_row<T: Clone>(arr: &Array2<T>, row: usize) -> Option<Array1<T>> {
     Some(arr.row(row).to_owned())
 }
 
-pub trait Layer<const N: usize> {
+pub trait Layer {
     // run takes an Array2<f64> as input, which will be used by each node
     // to compute a result,using weights and biases.
     // ex:  input.shape() = (1, 5)
@@ -62,9 +62,7 @@ pub trait Layer<const N: usize> {
     // get_n returns the amount of columns of weights (Array1<f64>) and bias (f64).
     // Is used to define the 2nd dimension of weights' shape, and first dim of bias' shape.
     // eg: (pl_n, n), pl_n = 'n' of previous layer, n = 'n' of current layer
-    fn get_n(&self) -> usize {
-        N
-    }
+    fn get_n(&self) -> usize;
     
     // get_nodes returns an array, of size 'n', of nodes, that will compute,
     // by order, input and provide an output.
@@ -72,6 +70,7 @@ pub trait Layer<const N: usize> {
 
     // compute_weights_m will determine the "m" dimension of a (m, n) shaped weights Array2
     // using the previous layer's output "n" dimension, and filters_pre modified "n" dimension diff
+    #[inline]
     fn compute_weights_m(&self, previous_n: usize) -> usize {
         let mut res = previous_n;
         self.get_filters()[0].iter().for_each(|f| res += f.get_n_diff());
@@ -100,13 +99,13 @@ impl<const N: usize> HiddenLayer<N> {
     }
 
     pub fn init_weights_rand(&mut self, previous_n: usize) {
-        self.weights = Array2Random::<f64>::fill((self.compute_weights_m(previous_n), N));
-        self.biases = Array1::zeros(N);
+        self.weights = Array2Random::<f64>::fill((self.compute_weights_m(previous_n), self.get_n()));
+        self.biases = Array1::zeros(self.get_n());
     }
 
     pub fn init_weights_zeros(&mut self, previous_n: usize) {
-        self.weights = Array2::zeros((self.compute_weights_m(previous_n), N));
-        self.biases = Array1::zeros(N);
+        self.weights = Array2::zeros((self.compute_weights_m(previous_n), self.get_n()));
+        self.biases = Array1::zeros(self.get_n());
     }
 
     pub fn init_weights_value(&mut self, previous_n: usize, value: f64) {
@@ -116,7 +115,7 @@ impl<const N: usize> HiddenLayer<N> {
     }
 }
 
-impl<const N: usize> Layer<N> for HiddenLayer<N> {
+impl<const N: usize> Layer for HiddenLayer<N> {
     fn get_weights(&self) -> &Weights {
         &self.weights
     }
@@ -131,4 +130,21 @@ impl<const N: usize> Layer<N> for HiddenLayer<N> {
             &self.filters_post
         ]
     }
+
+    fn get_n(&self) -> usize {
+        N
+    }
+}
+
+#[macro_export]
+macro_rules! layers {
+    ( $( $layer:expr), *) => {
+        {
+            let mut v = Vec::<Box<dyn $crate::hidden_layer::Layer>>::new();
+            $(
+                v.push(Box::new($layer));
+            )*
+            v
+        }
+    };
 }

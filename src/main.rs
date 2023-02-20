@@ -2,12 +2,14 @@ pub mod node;
 pub mod hidden_layer;
 pub mod array;
 pub mod io_filter;
+pub mod model;
+pub mod input_layer;
 
 use hidden_layer::{Weights, Bias, IO};
 use io_filter::DryFilter;
 use ndarray::array;
 
-use crate::{hidden_layer::{HiddenLayer, Layer}};
+use crate::{hidden_layer::{HiddenLayer, Layer}, input_layer::color_normalizer};
 
 struct DummyNodes;
 
@@ -26,28 +28,31 @@ impl DummyNodes {
     }
 }
 
-
 fn main() {
     let mut hl =  HiddenLayer::<10>::new(vec![
-        DummyNodes::mul_by_2_filter(),  
-        DummyNodes::new::<0>(|io: &IO| -> IO {
-            io.clone() + 1.
-        }),
+        // DummyNodes::mul_by_2_filter(),
+        // DummyNodes::new::<0>(|io: &IO| -> IO {
+        //     io.clone() + 1.
+        // }),
     ], vec![
-        DummyNodes::new::<0>(|io: &IO| -> IO {
-            io.clone() - 1.
-        }),
-        DummyNodes::mul_by_2_filter(),
+        // DummyNodes::new::<0>(|io: &IO| -> IO {
+        //     io.clone() - 1.
+        // }),
+        // DummyNodes::mul_by_2_filter(),
     ]);
 
-    // println!("a1.shape() {:?}, dot prod test {:?}", array![[1, 2, 3], [4, 5, 6]].shape(), array![[1, 2, 3], [4, 5, 6]].dot(&array![[6, 3], [5, 2], [4, 1]]));
+    let input = array![[244., 12.], [3., 66.], [212., 42.]];
+    hl.init_weights_value(input.shape()[1], 0.04);
+    let hl_weights = (&hl).get_weights().clone();
+    // let model = Model::<2>::new(Some(color_normalizer), vec![Box::new(hl)]);
+    // let model = model!(2, vec![Box::new(hl)]);
+    let model = model!(
+        2,
+        color_normalizer,
+        layers!(hl)
+    );
 
-    let input = array![[1., 4.]];
-    // hl.init_weights_rand(input.shape()[1]);
-    // hl.init_weights_zeros(input.shape()[1]);
-    hl.init_weights_value(input.shape()[1], 1.0);
+    let out = model.run(input.clone()).unwrap();
 
-    // matrices pre-check
-    let out =  hl.run(input.clone());
-    println!("input.shape {:?}, weights.shape {:?}, output.shape {:?} =>\nresult {:?}", input.shape(), hl.get_weights().shape(), out.shape(), out);
+    println!("input.shape {:?}, weights.shape {:?}, output.shape {:?} =>\nresult {:?}", input.shape(), hl_weights.shape(), out.shape(), out);
 }
