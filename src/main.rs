@@ -4,24 +4,27 @@ pub mod array;
 pub mod io_filter;
 pub mod model;
 pub mod input_layer;
+pub mod output_layer;
+pub mod wb;
+pub mod formula;
 
-use hidden_layer::{Weights, Bias, IO};
+use hidden_layer::A;
 use io_filter::DryFilter;
 use ndarray::array;
 
-use crate::{hidden_layer::{HiddenLayer, Layer}, input_layer::color_normalizer};
+use crate::{hidden_layer::{Layer, NLayers}, input_layer::color_normalizer, wb::value_init, node::sigmoid, model::FeaturesAmount};
 
 struct DummyNodes;
 
 impl DummyNodes {
     pub fn mul_by_2_filter() -> Box<DryFilter<0>> {
         Box::new(DryFilter {
-            filter_f: Box::new(|input: &IO| -> IO {
+            filter_f: Box::new(|input: &A| -> A {
                 input.clone() * 2.0
             })
         })
     }
-    pub fn new<const NDIFF: usize>(f: fn(&IO) -> IO) -> Box<DryFilter<NDIFF>> {
+    pub fn new<const NDIFF: usize>(f: fn(&A) -> A) -> Box<DryFilter<NDIFF>> {
         Box::new(DryFilter {
             filter_f: Box::new(f),
         })
@@ -29,30 +32,47 @@ impl DummyNodes {
 }
 
 fn main() {
-    let mut hl =  HiddenLayer::<10>::new(vec![
-        // DummyNodes::mul_by_2_filter(),
-        // DummyNodes::new::<0>(|io: &IO| -> IO {
-        //     io.clone() + 1.
-        // }),
-    ], vec![
-        // DummyNodes::new::<0>(|io: &IO| -> IO {
-        //     io.clone() - 1.
-        // }),
-        // DummyNodes::mul_by_2_filter(),
-    ]);
+    let input = array![[255.], [255.]];
+    // let hl = HiddenLayer::<1>::new(vec![
+    //     // DummyNodes::mul_by_2_filter(),
+    //     DummyNodes::new::<0>(|io: &A| -> A {
+    //         -io.clone()
+    //     }),
+    // ], sigmoid(),
+    // vec![],
+    // // zeros_init(), 
+    // value_init(1.),
+    // input.shape()[0]
+    // );
 
-    let input = array![[244., 12.], [3., 66.], [212., 42.]];
-    hl.init_weights_value(input.shape()[1], 0.04);
-    let hl_weights = (&hl).get_weights().clone();
-    // let model = Model::<2>::new(Some(color_normalizer), vec![Box::new(hl)]);
-    // let model = model!(2, vec![Box::new(hl)]);
+    // hl.init_weights_value(input.shape()[0], 0.04);
+    // let hl_weights = (&hl).get_weights().clone();
     let model = model!(
-        2,
+        FeaturesAmount(2),
         color_normalizer,
-        layers!(hl)
+        layers!(
+            hidden!(
+                sigmoid(),
+                value_init(1.),
+                NLayers(3)
+            ),
+            hidden!(
+                sigmoid(),
+                value_init(1.),
+                NLayers(2)
+            ),
+            hidden!(
+                sigmoid(),
+                value_init(1.),
+                NLayers(1)
+            )
+        )
     );
 
     let out = model.run(input.clone()).unwrap();
 
-    println!("input.shape {:?}, weights.shape {:?}, output.shape {:?} =>\nresult {:?}", input.shape(), hl_weights.shape(), out.shape(), out);
+    // println!("weights.shape {:?}, input.shape {:?}, output.shape {:?}\noutput: {:?}", hl_weights.shape(), input.shape(), out.shape(), out);
+    // println!("{:?}, {:?}", array![[1., 1., 1.]], array![[2., 2., 2., 2.]].t().dot(&array![[1., 2.]]) + 1.0);
+    // println!("{:?}", array![[1., 2.]].t());
+    println!("input.shape {:?}, output.shape {:?}\noutput: {:?}", input.shape(), out.shape(), out);
 }
