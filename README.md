@@ -1,6 +1,7 @@
 # ml-mini FFF (framework for fun)
 
 This WIP has multiple humble goals:
+
 - Deeper understanding of ML algorithms and structure. Lots of great ML frameworks for sure hidding the painful complexity. I need to understanding the painful complexity to become a better ML dev.
 - Level up Math skills.
 - Level up Rust programming knowledge.
@@ -8,6 +9,7 @@ This WIP has multiple humble goals:
 - Have fun classifying cat pictures
 
 Steps:
+
 - (IN PROGRESS) Forward and backpropagation framework. API as simple as possible considering the language used. Therefore, lots of macros
 - (TO DO) Write convenient input and output nodes.
 - (TO DO) Very simple binary image classifier using a single Logistic Regression node in hidden layers.
@@ -27,7 +29,7 @@ Made simple using macros:
 ```rust
 model!(
     input_layer!(convert_img_to_vector("/path/to/file")),
-    hidden!(
+    dense!(
         layer!(
             10,
             logistic_regression,
@@ -49,4 +51,4 @@ Framework automatically compute size of weights and biases with respect to previ
 
 ### Activation functions, nodes and classifiers
 
-Stack of provided (TO DO) activation functions, nodes and classifiers, ready to use. Those can also be specified through closures (TO DO). 
+Stack of provided (TO DO) activation functions, nodes and classifiers, ready to use. Those can also be specified through closures (TO DO).

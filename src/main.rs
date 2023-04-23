@@ -7,12 +7,13 @@ pub mod input_layer;
 pub mod output_layer;
 pub mod wb;
 pub mod formula;
+pub mod loss;
 
 use hidden_layer::A;
 use io_filter::DryFilter;
 use ndarray::array;
 
-use crate::{hidden_layer::{Layer, NLayers}, input_layer::color_normalizer, wb::value_init, node::sigmoid, model::FeaturesAmount};
+use crate::{hidden_layer::{Layer, Units}, input_layer::color_normalizer, wb::value_init, node::sigmoid, model::FeaturesAmount, loss::basic_loss};
 
 struct DummyNodes;
 
@@ -33,7 +34,7 @@ impl DummyNodes {
 
 fn main() {
     let input = array![[255.], [255.]];
-    // let hl = HiddenLayer::<1>::new(vec![
+    // let hl = Dense::<1>::new(vec![
     //     // DummyNodes::mul_by_2_filter(),
     //     DummyNodes::new::<0>(|io: &A| -> A {
     //         -io.clone()
@@ -47,29 +48,32 @@ fn main() {
 
     // hl.init_weights_value(input.shape()[0], 0.04);
     // let hl_weights = (&hl).get_weights().clone();
-    let model = model!(
+    let mut model = model!(
         FeaturesAmount(2),
         color_normalizer,
         layers!(
-            hidden!(
+            dense!(
+                Units(3),
                 sigmoid(),
-                value_init(1.),
-                NLayers(3)
+                value_init(1.)
             ),
-            hidden!(
+            dense!(
+                Units(2),
                 sigmoid(),
-                value_init(1.),
-                NLayers(2)
+                value_init(1.)
             ),
-            hidden!(
+            dense!(
+                Units(1),
                 sigmoid(),
-                value_init(1.),
-                NLayers(1)
+                value_init(1.)
             )
-        )
+        ),
+        basic_loss()
     );
 
-    let out = model.run(input.clone()).unwrap();
+    // let out = model.run(input.clone()).unwrap();
+    let out = model.train(input.clone(), array![[1.]]).unwrap();
+
 
     // println!("weights.shape {:?}, input.shape {:?}, output.shape {:?}\noutput: {:?}", hl_weights.shape(), input.shape(), out.shape(), out);
     // println!("{:?}, {:?}", array![[1., 1., 1.]], array![[2., 2., 2., 2.]].t().dot(&array![[1., 2.]]) + 1.0);

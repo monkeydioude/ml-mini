@@ -7,7 +7,7 @@ pub type Weights = Array2<f64>;
 pub type Biases = Array2<f64>;
 pub type A = Array2<f64>;
 
-pub struct NLayers(pub usize);
+pub struct Units(pub usize);
 
 pub trait Layer {
     // run takes an Array2<f64> as input, which will be used by each node
@@ -73,7 +73,7 @@ fn compute_weights_m(filters: &Vec<Box<dyn Filter>>, previous_n: usize) -> usize
     res
 }
 
-pub struct HiddenLayer<const N: usize> {
+pub struct Dense<const N: usize> {
     filters_pre: Vec<Box<dyn Filter>>,
     node: Box<dyn Node>,
     filters_post: Vec<Box<dyn Filter>>,
@@ -81,8 +81,8 @@ pub struct HiddenLayer<const N: usize> {
     biases: Biases,
 }
 
-impl<const N: usize> HiddenLayer<N> {
-    // new creates a new HiddenLayer struct
+impl<const N: usize> Dense<N> {
+    // new creates a new Dense struct
     // filters_pre: filters that are gonna be used before activation function
     // node: activation node, requires weights and biases to use
     // filters_post: filters that are gonna be used before activation function
@@ -96,7 +96,7 @@ impl<const N: usize> HiddenLayer<N> {
         previous_n: usize
     ) -> Self {
         let wb = wbi.init(N, compute_weights_m(&filters_pre, previous_n)).unwrap();
-        HiddenLayer {
+        Dense {
             filters_pre,
             node,
             filters_post,
@@ -106,7 +106,7 @@ impl<const N: usize> HiddenLayer<N> {
     }
 }
 
-impl<const N: usize> Layer for HiddenLayer<N> {
+impl<const N: usize> Layer for Dense<N> {
     fn get_weights(&self) -> &Weights {
         &self.weights
     }
@@ -146,17 +146,17 @@ macro_rules! layers {
 }
 
 #[macro_export]
-macro_rules! hidden {
-    ( $pre:expr, $node:expr, $post:expr, $wbinit:expr, $n:expr) => {
+macro_rules! dense {
+    ($n:expr, $pre:expr, $node:expr, $post:expr, $wbinit:expr) => {
         {
             |prev_n: usize| -> Box<dyn Layer> {
-                Box::new($crate::hidden_layer::HiddenLayer::<{ $n.0 }>::new($pre, $node, $post, $wbinit, prev_n))
+                Box::new($crate::hidden_layer::Dense::<{ $n.0 }>::new($pre, $node, $post, $wbinit, prev_n))
             }
         }
     };
-    ( $node:expr, $wbinit:expr, $n:expr) => {
+    ($n:expr, $node:expr, $wbinit:expr) => {
         {
-            hidden!(vec![], $node, vec![], $wbinit, $n)
+            dense!($n, vec![], $node, vec![], $wbinit)
         }
     };
 }

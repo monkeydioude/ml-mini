@@ -15,7 +15,7 @@ use crate::{activation::med, node_io::IO, input_filters::{f_to_io, do_nothing}};
 fn main() {
     let res = model!(
         input_layer!(do_nothing, f_to_io(3.0)),
-        hidden!(
+        dense!(
             layer!(
                 10,
                 mul_by(0.2),
